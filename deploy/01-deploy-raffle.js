@@ -1,9 +1,11 @@
 const { network, ethers } = require("hardhat")
 const { developmentChain, networkConfig } = require("../helper-hardhat-config")
+const { verify } = require("../utils/verify")
 
-const VRF_SUB_FUND_AMOUNT = ethers.parseEther("2")
+const VRF_SUB_FUND_AMOUNT = ethers.utils.parseEther("2")
+
 module.exports = async function ({ getNamedAccounts, deployments }) {
-    const { deployments, log } = deployments
+    const { deploy, log } = deployments
     const { deployer } = await getNamedAccounts()
     const chainId = network.config.chainId
     let vrfCoodinatorV2Address, subscriptionId
@@ -34,10 +36,18 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
         interval,
     ]
 
-    const raffle = await deployer("Raffle", {
+    const raffle = await deploy("Raffle", {
         from: deployer,
         args: args,
         log: true,
         waitConfirmations: network.config.blockConfirmations || 1,
     })
+
+    if (!developmentChain?.includes(network.name) && process.env.ETHERSCAN_API_KEY) {
+        console.log("Verifying... ")
+        await verify(raffle.address, args)
+    }
+    console.log("----------------------------")
 }
+
+module.exports.tags = ["all", "raffle"]
